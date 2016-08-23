@@ -18,11 +18,18 @@ module Apnotic
 
     def initialize(options={})
       @url             = options[:url] || APPLE_PRODUCTION_SERVER_URL
+      @cert            = options[:cert]
       @cert_path       = options[:cert_path]
       @cert_pass       = options[:cert_pass]
       @connect_timeout = options[:connect_timeout] || 30
 
-      raise "Cert file not found: #{@cert_path}" unless @cert_path && (@cert_path.respond_to?(:read) || File.exist?(@cert_path))
+      if @cert
+        # cert passed in as string
+      elsif @cert_path && (@cert_path.respond_to?(:read) || File.exist?(@cert_path))
+        # have cert
+      else
+        raise "Cert file not found: #{@cert_path}"
+      end
 
       @client = NetHttp2::Client.new(@url, ssl_context: ssl_context, connect_timeout: @connect_timeout)
     end
@@ -77,7 +84,9 @@ module Apnotic
 
     def certificate
       @certificate ||= begin
-        if @cert_path.respond_to?(:read)
+        if @cert
+          cert = @cert
+        elsif @cert_path.respond_to?(:read)
           cert = @cert_path.read
           @cert_path.rewind if @cert_path.respond_to?(:rewind)
         else
